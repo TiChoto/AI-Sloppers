@@ -1,106 +1,108 @@
-# Design Review · Unimarket · AI-Sloppers
+# Design Review — UniMarket — AI-Sloppers
 
-**Members (GitHub usernames only):** [`@LashaJaparidze`](https://github.com/LashaJaparidze) · [`@Ti_Choto`](https://github.com/Ti_Choto) · [`@LukaVasadze07`](https://github.com/LukaVasadze07) · [`@terjolskiterjolski`](https://github.com/terjolskiterjolski). **Team approach:** shared development, testing, integration, and documentation; any coordination areas below are non-exclusive and can change as the project progresses.  
-**Repo:** [TiChoto/AI-Sloppers](https://github.com/TiChoto/AI-Sloppers) · **Graded commit:** tag `design-review` on `main` (not yet created).  
-**Evidence status (20 October 2026):** This is a design draft for a project starting from zero. Code, linked evidence, model runs, tests, and team decisions described as *planned* below have **not** been completed or verified. Do not change their status without repository evidence.
+**Team:** `@LashaJaparidze` · `@Ti_Choto` · `@LukaVasadze07` · `@Terjolskiterjolski` (Nikolozi Kutaladze)  
+**Repository:** [TiChoto/AI-Sloppers](https://github.com/TiChoto/AI-Sloppers)  
+**Snapshot reviewed:** 20 October 2026. The supplied ZIP has no Git history, so merge and `design-review` tag status must be checked in the live repository.
 
-## 1 · Problem, users, success criteria (2 points)
+The snapshot contains four individual HW1 prototypes in separate folders, but no shared application source at the repository root. This review distinguishes those tested slices from the not-yet-integrated marketplace.
 
-**Problem.** University students buy and sell used textbooks, calculators, electronics, and dorm essentials through scattered chats and social-media posts. Listings are hard to compare, details are inconsistent, and a buyer may waste time asking for a price, condition, or availability already known to the seller. Unimarket puts structured listings in one searchable place and uses AI to assist—not replace—the seller.
+## 1. Problem, users, and success criteria
 
-**Users.** Students selling used items and students looking for affordable items at their university. The first release is *student-focused*, not institution-verified: university SSO and identity verification are out of scope. The product spec will live at `docs/spec.md` (**planned; file not yet supplied**).
+University students buy and sell used textbooks, calculators, electronics, and dorm items through scattered chats. Buyers struggle to compare listings; sellers repeatedly answer questions about price and condition. UniMarket aims to make these items searchable, with AI assistance while people retain control. The initial users are students; university identity verification, payments, and delivery are outside the current scope. A product-level `docs/spec.md` is not in this snapshot; the available specs describe individual HW1 slices.
 
-| # | Script-checkable success criterion | Evidence path / measurement | Today |
+| # | Success criterion | Evidence | Status in this snapshot |
 |---|---|---|---|
-| S1 | A valid listing is saved with title, category, price, condition, and seller-approved description; invalid or negative prices are rejected. | `tests/test_listings.py`; listing API responses | Not implemented |
-| S2 | Image-assisted drafting never publishes automatically; missing or unsupported fields are left empty and routed to confirmation or review. | `tests/test_confidence.py`; `docs/confidence-policy.md` | Not implemented |
-| S3 | Grounded marketplace Q&A cites only retrieved listing/rule sources; insufficient evidence triggers a refusal, including before model invocation when retrieval is weak. | `tests/test_answer.py`; `evals/golden.yaml`; answer/refusal logs | Not implemented |
-| S4 | The five-question live golden set meets the **0.70** threshold; actual results and failures are committed. | `evals/results/<timestamp>.json` | Not run |
+| S1 | Create, retrieve, update, delete, and filter listings; reject invalid fields and inverted price ranges. | [Luka’s spec](../hw1/LukaVasadze07/spec.md), [API tests](../hw1/LukaVasadze07/src/tests/test_listings_api.py), [golden results](../hw1/LukaVasadze07/golden.md) | Standalone FastAPI prototype passes its recorded checks. It uses a process-local store, not durable team storage, and has no shared UI. |
+| S2 | Unsupported draft fields are not silently prefilled; seller retains control of publication. | [Lasha’s spec](../hw1/LashaJaparidze/spec.md), [DraftCheck tests](../hw1/LashaJaparidze/src/tests/test_draftcheck_decide.py), [golden results](../hw1/LashaJaparidze/golden.md) | Standalone decision gate and CLI are tested with hand-written drafts. No image/model pipeline, seller UI, or publish flow is integrated. |
+| S3 | Rank keyword matches and optionally restrict results to an exact category; explain matched terms and fields. | [Ti_Choto baseline](../hw1/Ti_Choto/src/unimarket/assistants/local_search.py), [Nikolozi’s extension spec](../hw1/Terjolskiterjolski/spec.md), [category tests](../hw1/Terjolskiterjolski/src/tests/test_category_filter.py), [captured golden output](../hw1/Terjolskiterjolski/src/evidence/golden-results.json) | Implemented over local/synthetic records. The category-filter version has a CLI and recorded test run; neither version is wired to Luka’s API/store. |
+| S4 | Marketplace answers cite current retrieved listing/rule sources and refuse unsupported questions before answer generation. | Planned: `evals/golden.yaml`, `evals/results/`, and answer/refusal tests | Not implemented in this snapshot. No team RAG/Q&A code or five-question live evaluation is present. |
 
-## 2 · Architecture and data flow (2 points)
+## 2. Architecture and data flow
 
-**Proposed architecture (not an as-built diagram):** responsive web UI; Python/FastAPI API; SQLite for initial listings; approved marketplace rules and shareable listing descriptions for retrieval. Payments, delivery, and automatic university identity verification are excluded from the MVP.
+Solid arrows show flows implemented inside individual HW1 folders. Dashed arrows show the intended shared product flow; those components are not in this repository snapshot.
 
 ```mermaid
-flowchart TD
-  U[Student web UI] --> API[FastAPI: auth/session, validation and endpoints]
-  API -->|create or update listing| DB[(SQLite: listings and status)]
-  API -->|photo or rough text| PRE[Resize image to max 1024 px]
-  PRE --> V[Vision/text model: structured listing draft]
-  V --> VAL[Pydantic schema validation]
-  VAL --> DEC{Pure confidence policy: decide}
-  DEC -->|accepted or confirm| H[Seller sees editable draft]
-  DEC -->|hard flags: review| REV[Empty unsupported fields; human review]
-  DEC -->|wrong input: reject| REJ[Explain rejection]
-  REV --> H
-  H -->|explicit seller approval| API
-  DB --> ING[Index current searchable listing records]
-  COR[(data/corpus: shareable rules and FAQ)] --> ING
-  ING --> EMB[Embedding model: document chunks]
-  EMB --> IDX[(Index: vectors, source IDs, model ID)]
-  U -->|natural-language search or question| API
-  API -->|embed query| QE[Embedding model: user query]
-  QE --> RET[Retrieve top-k, score and verify current record]
-  IDX --> RET
-  RET -->|below tuned threshold| REF[Refuse; log reason; no answer-model call]
-  RET -->|supported sources| ANS[Answer model: answer, citations, grounded]
-  ANS --> CHECK{Validate JSON and check citations}
-  CHECK -->|invalid or uncited| REF
-  CHECK -->|valid| OUT[Cited answer or relevant listing links]
-  RET -->|search results only| OUT
-  OUT --> U
-  REF --> U
+flowchart LR
+  subgraph HW1["Implemented individually; not integrated"]
+    S1[Listing request] --> API[FastAPI listing API]
+    API --> VAL[Pydantic validation]
+    VAL --> MEM[(InMemoryListingStore)]
+    D[Seller text + draft JSON] --> DC[DraftCheck.decide]
+    DC --> ROUTE[Route + safe form fields]
+    DATA[Synthetic listing records] --> IDX[LocalKeywordSearch]
+    Q[CLI query + optional category] --> IDX
+    IDX --> HITS[Ranked IDs + matched-term reasons]
+  end
+
+  subgraph TARGET["Planned shared product; not implemented"]
+    U[Student UI] -.-> SVC[Shared API]
+    SVC -.-> DB[(Persistent listing store)]
+    SVC -.-> VISION[Vision/text model — not selected]
+    VISION -.-> SCHEMA[Draft schema validation]
+    SCHEMA -.-> GATE[DraftCheck logic — not integrated]
+    GATE -.-> HUMAN[Seller reviews and approves]
+    HUMAN -.-> SVC
+    DB -.-> CORPUS[(Current listings + approved rules)]
+    CORPUS -.-> EMB[Corpus embedding model — TBD]
+    EMB -.-> VDB[(Search index)]
+    U -.-> SVC
+    SVC -.-> QEMB[Query embedding model — TBD]
+    QEMB -.-> RET[Retrieve + check listing status]
+    VDB -.-> RET
+    RET -.->|weak evidence| REF[Refuse before answer call]
+    RET -.->|supported evidence| ANSWER[Answer model — TBD]
+    ANSWER -.-> CHECK[Validate citations]
+    CHECK -.-> REF
+    CHECK -.-> U
+    REF -.-> U
+  end
 ```
 
-The seller's photo/text goes to a **Lab 3 multimodal model** only after downscaling. The model proposes field-wise `{value, evidence, confidence}`; Pydantic validates the shape, and a deterministic `decide()` routes to `accepted`, `confirm`, `review`, or `rejected`. A low-confidence value alone cannot certify a field. Fields without evidence stay empty, and *even an accepted draft requires a seller click before publication*. See planned `docs/multimodal-spec.md` and `docs/confidence-policy.md`.
+Luka’s API validates listing fields and stores them in `InMemoryListingStore`; restarting clears records. Structured search is separate from the assistant protocol. DraftCheck is a pure local function: a draft and seller text produce a route and fields safe to prefill. It makes no model call and publishes nothing. Ti_Choto’s ranker and Nikolozi’s category filter index listing-shaped records locally and return IDs with lexical-match explanations; they do not read Luka’s store. Each is a slice, not an end-to-end system.
 
-The **Lab 4 retrieval path** embeds approved documents and current listing records, stores source IDs and embedding-model identity, and retrieves scored results for a question. Listings are rechecked against the database before they are shown so sold/removed products are not presented as available. If nothing passes a tuned threshold, the service refuses **before** calling the answer model. Otherwise, the answer model returns `{answer, citations, grounded}`; code checks that citations belong to retrieved sources and cover factual sentences. Any failed check becomes a refusal, never an unsupported answer. See planned `docs/retrieval-spec.md`.
+The dashed target path is not implemented. Model IDs, durable storage, retrieval, live-status checks, answer/refusal handling, and the seller interface remain open work. Integration must preserve seller approval and validate citations.
 
-| Model call | Model ID | Input → output | Validation / evidence |
-|---|---|---|---|
-| Multimodal draft | **TBD; select and record actual model** | Resized product image + seller text → field values, evidence, confidence | JSON schema, Pydantic, `decide()`, seller confirmation; Lab 3 tests |
-| Embed corpus/listings | **TBD; fixed at index creation** | Shareable text chunks → vectors + model metadata | Index rejects model-ID mismatch |
-| Embed question | **Same embedding model** | User's search or question → vector | Dimensionality/model match; retrieval score |
-| Grounded answer | **TBD; select and record actual model** | Retrieved numbered sources + question → `{answer, citations, grounded}` | Pydantic and deterministic citation checks; Lab 4 tests |
+| Planned model call | Model ID / usage | Validation or evidence |
+|---|---|---|
+| Listing draft from text/photo | Not selected; no call in this snapshot | DraftCheck has local decision tests; no model response or image pipeline. |
+| Embed listings/rules and query | Not selected; no call in this snapshot | No shared retrieval index or embedding logs. |
+| Grounded answer | Not selected; no call in this snapshot | No answer model, citation checker, or refusal implementation. |
 
-## 3 · Risks and safety threats (2 points)
+## 3. Risks and safety threats
 
-All mitigations below are **planned**, not implemented. The GitHub handles in the final column are **proposed coordination contacts for these specific risks**, not exclusive implementation assignments; the team can redistribute work.
+| Risk and user harm | Mitigation and status | Coordination contact |
+|---|---|---|
+| A draft invents a price or condition, misleading a seller or buyer. | DraftCheck leaves missing/unsupported price fields blank; tests cover an invented price. Standalone only; no vision model or seller form. | `@LashaJaparidze` |
+| Search returns an irrelevant or stale item; a buyer contacts a seller about an unavailable listing. | Keyword reasons expose lexical matches, but there are no synonyms or live-store sync. **Week 6 plan:** sync index updates and check availability against the store. | `@Ti_Choto` |
+| An answer invents a price, rule, or availability. | No answer path exists. **Week 5 plan:** retrieve approved sources, verify listing status, refuse below a tested threshold, and validate citations. | `@Ti_Choto` |
+| Listing text or retrieved content contains prompt injection. | No model/corpus path exists. **Week 6 plan:** treat this text as untrusted and test malicious instructions against refusal and citation checks. | `@LukaVasadze07` |
+| Photos, listings, or logs expose contact details, faces, or student identifiers. | No image pipeline or production corpus exists. **Week 5 plan:** use synthetic/consented data, exclude personal data from retrieval/logs, and review redaction before model integration. | `@Terjolskiterjolski` |
+| Model outage or uncontrolled prompt size breaks the flow or increases spend. | HW1 prototypes make no model calls. **Week 6 plan:** set input limits, user-visible fallback, and token/cost/latency logging before adding calls. | `@LashaJaparidze` |
 
-| Product-specific risk | User-visible harm | Mitigation and due week | Proposed contact (flexible) |
-|---|---|---|---|
-| Vision model invents brand, condition, or price from an unclear photo | Misleading listing and purchase decision | **Week 5:** require nullable per-field evidence, never infer price from an image, use `decide()` with hard/soft flags, and require seller approval (`docs/confidence-policy.md`, planned) | `@LashaJaparidze` |
-| RAG invents a price, rule, or product availability | Buyer relies on incorrect information | **Week 5:** threshold-based pre-model refusal, citation validation, sold-status recheck, answer/refusal logs and offline tests (`tests/test_answer.py`, planned) | `@Ti_Choto` |
-| Seller text or retrieved documents contain prompt injection | Assistant follows hidden instructions rather than marketplace rules | **Week 6:** treat all listing/document contents as untrusted data; test malicious instructions and refuse unsupported output | `@LukaVasadze07` |
-| Photos or listings expose phone numbers, addresses, student IDs, or faces | Personal information leaked into corpus, logs, or AI requests | **Week 5:** synthetic/consented test images with no faces/IDs; avoid personal data in retrieval corpus; redact logs and keep API keys in environment variables | `@terjolskiterjolski` |
-| Sold/deleted items remain in the search index | Buyers contact sellers about unavailable goods | **Week 6:** invalidate/reindex on status changes and verify live database status before responding | `@Ti_Choto` |
-| Model outages or uncontrolled prompt size | Broken assistant or unexpected API spending | **Week 6:** user-visible fallback, request/token limits, usage logging and monitored costs | `@LashaJaparidze` |
+## 4. Evaluation plan and current evidence
 
-## 4 · Evaluation plan (2 points)
+There is no team `evals/golden.yaml`, `evals/results/`, or RAG test suite. The Lab 4 five-question set has **not run** (N/A; zero questions executed). HW1 goldens test individual slices, not team RAG:
 
-- **Golden set:** `evals/golden.yaml` (**planned, not committed**); five questions from the **actual approved corpus**, classified as **2 factual, 1 reasoning across two sources, 1 edge case, 1 refusal**. Each will specify `expect`, `must_cite`, `must_mention`, and `why`. Candidate areas: a listing's stated price/condition, a marketplace rule, comparing two listings, a typo in a query, and a request for an unsupported guarantee. Expected answers will be written only after the sample records and rules exist.
-- **Last live run:** **none** · **Committed result:** **none** · **Pass rate:** **N/A (0 questions executed; not 0/5)**. **Failures:** not yet observable; no test or model run has occurred. Planned runner: `evals/run_golden.py`; results in `evals/results/`.
-- **Lab 4 verification:** add at least three offline tests: invented citation → refusal; low retrieval score → refusal without model call; valid `[n]` → corresponding retrieved source. Run a five-question live evaluation, change one retrieval setting (top-*k* or threshold), rerun, and record both results and the decision.
-- **By Week 11:** expand to **10 cases: 3 factual, 2 reasoning, 2 edge, 2 refusal, 1 format**; use an independent judge for semantic answer checks. A score **below 0.70** will block pull-request merges in CI, not be hidden by changing expected answers. Keep failed runs and diagnose them.
+- Luka records three HTTP cases and a 62-test run in [golden.md](../hw1/LukaVasadze07/golden.md).
+- Lasha records three DraftCheck cases and a 30-test run in [golden.md](../hw1/LashaJaparidze/golden.md).
+- Ti_Choto records three lexical-search cases in [golden.md](../hw1/Ti_Choto/golden.md); the test file covers the ranker.
+- Nikolozi records three category-filter cases in [golden.md](../hw1/Terjolskiterjolski/golden.md), captured outputs in [golden-results.json](../hw1/Terjolskiterjolski/src/evidence/golden-results.json), and **20 passed, 6 subtests passed** in [pytest-results.txt](../hw1/Terjolskiterjolski/src/evidence/pytest-results.txt).
 
-## 5 · Token budget (1 point)
+Before merging answers, add five cases from the approved corpus: two factual, one two-source reasoning, one edge, and one refusal. Commit the run and diagnosis, then tune one retrieval setting and rerun. By Week 11, expand to ten cases (3 factual, 2 reasoning, 2 edge, 2 refusal, 1 format). Make the 0.70 gate block merges after its runner is implemented; keep failures visible.
 
-**Actual usage evidence:** `logs/usage.jsonl` (**not created**). There have been **no verified API calls**, so model prices, token medians, median latency, and cost per request cannot truthfully be reported yet. Each planned model call will record model ID, input/output tokens, billed cost, latency, timestamp, and feature. Report medians after **at least 10 real calls per measured feature**, with actual provider pricing.
+## 5. Token budget
 
-| Feature | Model | Median input/output tokens | Median cost/request | Median latency | Source |
-|---|---|---|---|---|---|
-| Listing image draft | TBD | Not measured | Not measured | Not measured | `logs/usage.jsonl` (planned) |
-| Grounded `/ask` + query embedding | TBD | Not measured | Not measured | Not measured | `logs/usage.jsonl` (planned) |
-| Smart-search query embedding | TBD | Not measured | Not measured | Not measured | `logs/usage.jsonl` (planned) |
+The four HW1 features are deterministic and make **zero model calls**; their model-token use and model cost are **0**. Luka’s HTTP and test timings are local execution, not model latency. No `logs/usage.jsonl`, production calls, or per-request model metrics are present, so production monthly cost is unknown.
 
-**Monthly load assumption (not actual usage):** 200 students × 2 AI questions per day × 30 days = **12,000 questions/month**, plus an estimated 20 assisted listings per day × 30 = **600 drafts/month**. Estimated monthly cost *once measured* = `12,000 × median /ask cost + 600 × median draft cost + indexing costs`; a monetary total is **pending real logs**.
+| Feature | Model | Tokens / cost / latency |
+|---|---|---|
+| HW1 listing API, DraftCheck, and keyword search | None | 0 model tokens; $0 model cost by design. Local test/API timings are not model latency. |
+| Future listing draft, embeddings, and grounded answer | TBD | Not measured; add provider usage logs before estimating. |
 
-**RAG vs. long context:** retrieval is selected because documents and listing records change and only a few need to be sent per answer. *Illustrative arithmetic, not a measured workload:* sending 20,000 corpus tokens in every prompt versus retrieving five 300-token chunks sends **20,000 vs. 1,500 source tokens/request** (about **13.3× less source context**, excluding shared instructions, output and embeddings). Replace these assumptions with actual corpus/chunk sizes and model prices in the measured budget.
+Planning scenario, not traffic data: 200 students × 2 questions/day × 30 days = 12,000 questions/month; 20 drafts/day × 30 = 600 drafts/month. Cost is `12,000 × measured answer cost + 600 × measured draft cost + indexing` once logged. Illustrative RAG arithmetic: five 300-token chunks (1,500 tokens) versus a 20,000-token corpus would send 92.5% fewer source tokens. Traffic, corpus size, and chunk size are not measured in this snapshot.
 
-## 6 · Team, roles and decisions (1 point)
+## 6. Team, contributions, and decisions
 
-- **Team contract:** `TEAM-CONTRACT.md` (**not yet verified on `main`**). **Role record:** `docs/TEAM-REPO.md`, section 1 (**planned / not verified**). The four contributors are `@LashaJaparidze`, `@Ti_Choto`, `@LukaVasadze07`, and `@terjolskiterjolski`.
-- **Flexible responsibilities (proposed):** all members contribute across product development, AI/RAG integration, evaluation, testing, code review, and documentation as needed. For coordination only, `@LashaJaparidze` may help track implementation quality, `@Ti_Choto` integration, `@LukaVasadze07` testing, and `@terjolskiterjolski` documentation. These are **not exclusive roles** or fixed module assignments; the team will distribute tasks by availability and project needs. The proposed risk contacts in Section 3 may likewise be changed.
-- **Decision 0001 (planned):** `docs/decisions/0001-human-approved-ai-drafts.md` — AI can suggest listing data but never publish without explicit seller approval; this limits invented details and preserves accountability.
-- **Decision 0002 (planned):** `docs/decisions/0002-grounded-retrieval.md` — prefer scored, source-attributed retrieval over copying all listings into the answer prompt; choose a starting *k*/threshold, then record a real Lab 4 tuning run and rationale.
-- **Next build steps (shared ownership):** implement and test a listing-create/read slice; add image extraction with confidence routing; build the cited-answer/refusal path and golden-set evaluation; connect the seller review interface. Specific task owners will be chosen as work starts and recorded in `docs/TEAM-REPO.md`. Delegated agent work will be recorded in `docs/delegation-log.md`. **These are plans, not completed work.**
+The four members have separate HW1 slices: Luka’s listing API/store; Lasha’s DraftCheck; Ti_Choto’s keyword-search baseline; and Nikolozi Kutaladze’s (`@Terjolskiterjolski`) category filter, CLI, tests, and captured golden output built on that baseline. These are HW1 contributions, not shared-module assignments.
+
+`TEAM-CONTRACT.md`, `docs/TEAM-REPO.md`, and `docs/decisions/` are not included in this snapshot. The previous review named two planned decisions—human approval before publication and grounded retrieval with refusal—but no decision records verify team agreement. Record team roles and those decisions in their normal files before treating them as approved. The archive has no `.git`, so main-branch, PR, and tag state must be checked in the live repository.
