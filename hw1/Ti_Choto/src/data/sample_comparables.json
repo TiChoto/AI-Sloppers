@@ -1,0 +1,7 @@
+[
+  {"category": "Home", "condition": "good", "price": "8.00"},
+  {"category": "Home", "condition": "good", "price": "10.00"},
+  {"category": "Home", "condition": "good", "price": "12.00"},
+  {"category": "Electronics", "condition": "good", "price": "150.00"},
+  {"category": "Electronics", "condition": "good", "price": "200.00"}
+]
