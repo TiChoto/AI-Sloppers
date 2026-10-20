@@ -1,0 +1,7 @@
+[
+  {"id": "calc-1", "title": "Scientific calculator", "description": "Reliable for engineering exams", "category": "Electronics", "condition": "good"},
+  {"id": "guide-1", "title": "Calculator study guide", "description": "Engineering exercises", "category": "Books", "condition": "good"},
+  {"id": "book-chem", "title": "Chemistry textbook", "description": "Introductory chemistry for first year", "category": "Books", "condition": "good"},
+  {"id": "book-physics", "title": "Physics textbook", "description": "Mechanics and waves", "category": "Books", "condition": "good"},
+  {"id": "tablet-1", "title": "Textbook reader tablet", "description": "Read course materials", "category": "Electronics", "condition": "good"}
+]
