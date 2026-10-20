@@ -1,0 +1,57 @@
+{
+  "run_at_utc": "2026-10-20T19:38:59.971569+00:00",
+  "model_calls": 0,
+  "tokens": 0,
+  "cost_usd": 0,
+  "results": [
+    {
+      "query": "calculator",
+      "category": "Electronics",
+      "expected": [
+        {
+          "listing_id": "calc-1",
+          "reason": "Matched title terms: calculator."
+        }
+      ],
+      "actual": [
+        {
+          "listing_id": "calc-1",
+          "reason": "Matched title terms: calculator."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "query": "chemistry textbook",
+      "category": "  bOoKs  ",
+      "expected": [
+        {
+          "listing_id": "book-chem",
+          "reason": "Matched title terms: chemistry, textbook."
+        },
+        {
+          "listing_id": "book-physics",
+          "reason": "Matched title terms: textbook."
+        }
+      ],
+      "actual": [
+        {
+          "listing_id": "book-chem",
+          "reason": "Matched title terms: chemistry, textbook."
+        },
+        {
+          "listing_id": "book-physics",
+          "reason": "Matched title terms: textbook."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "query": "calculator",
+      "category": "Transport",
+      "expected": [],
+      "actual": [],
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+Run date: 2026-10-20 (Asia/Tbilisi)
+Interpreter: Python 3.13, pytest 9.1.1
+Command from repository root:
+python -m pytest hw1/Terjolskiterjolski -q -p no:cacheprovider
+
+....................                                               [100%]
+20 passed, 6 subtests passed in 0.25s
+
+Environment note: the WindowsApps python alias was unusable. The actual
+interpreter was C:/Users/ASUS/AppData/Local/Programs/Python/Python313/python.exe.
+Pytest was installed in a temporary .hw1-test-deps directory and added to
+PYTHONPATH. Tests required access outside the restricted sandbox to read
+those dependencies. Application and golden runner use no third-party packages.
