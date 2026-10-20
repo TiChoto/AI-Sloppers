@@ -1,0 +1,9 @@
+{
+  "seller_text": "Selling a desk chair, 30 GEL.",
+  "draft": {
+    "title":     {"value": "Desk chair", "evidence": "desk chair", "confidence": 0.9},
+    "category":  {"value": "Home", "evidence": "desk chair", "confidence": 0.8},
+    "condition": {"value": null, "evidence": null, "confidence": 0.0},
+    "price":     {"value": "30.00", "evidence": "30 GEL", "confidence": 1.7}
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "seller_text": "Casio fx-991EX calculator, works perfectly, small scratch on the cover. Photo attached.",
+  "draft": {
+    "title":     {"value": "Casio fx-991EX calculator", "evidence": "Casio fx-991EX calculator", "confidence": 0.95},
+    "category":  {"value": "Electronics", "evidence": "calculator", "confidence": 0.9},
+    "condition": {"value": "good", "evidence": "small scratch on the cover", "confidence": 0.8},
+    "price":     {"value": "45.00", "evidence": "45 GEL", "confidence": 0.9}
+  }
+}

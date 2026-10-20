@@ -1,0 +1,9 @@
+{
+  "seller_text": "Selling my Calculus textbook (Stewart, 8th edition). Barely used, no highlights. 25 GEL, pick up at the KIU library.",
+  "draft": {
+    "title":     {"value": "Calculus textbook (Stewart, 8th edition)", "evidence": "Calculus textbook (Stewart, 8th edition)", "confidence": 0.95},
+    "category":  {"value": "Textbooks", "evidence": "textbook", "confidence": 0.9},
+    "condition": {"value": "like_new", "evidence": "Barely used, no highlights", "confidence": 0.85},
+    "price":     {"value": "25.00", "evidence": "25 GEL", "confidence": 0.95}
+  }
+}

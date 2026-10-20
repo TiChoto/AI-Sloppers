@@ -1,0 +1,9 @@
+{
+  "seller_text": "Does anyone know if the library is open on Sunday?",
+  "draft": {
+    "title":     {"value": null, "evidence": null, "confidence": 0.0},
+    "category":  {"value": null, "evidence": null, "confidence": 0.0},
+    "condition": {"value": null, "evidence": null, "confidence": 0.0},
+    "price":     {"value": null, "evidence": null, "confidence": 0.0}
+  }
+}

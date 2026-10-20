@@ -1,0 +1,9 @@
+{
+  "seller_text": "Desk lamp, LED, 8 GEL.",
+  "draft": {
+    "title":     {"value": "LED desk lamp", "evidence": "Desk lamp, LED", "confidence": 0.9},
+    "category":  {"value": "Home", "evidence": "IKEA label on the base", "confidence": 0.7},
+    "condition": {"value": "fair", "evidence": "visible scuffs on the base", "confidence": 0.65},
+    "price":     {"value": "8.00", "evidence": "8 GEL", "confidence": 0.95}
+  }
+}
