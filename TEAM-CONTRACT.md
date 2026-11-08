@@ -14,3 +14,4 @@
 - **PR Approval Policy**: Every PR requires at least 1 code review before merging into `main`.
 - **Commit Sign-offs**: Architecture decisions and contract files require commit contributions from all 4 members.
 - **Communication**: Primary updates and decisions are coordinated via team chat. 
+ 
